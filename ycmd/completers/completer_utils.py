@@ -36,12 +36,12 @@ class PreparedTriggers( object ):
     self._filetype_to_prepared_triggers = final_triggers
 
 
-  def MatchesForFiletype( self, current_line, start_column, filetype ):
+  def MatchesForFiletype( self, current_line, start_column, query, filetype ):
     try:
       triggers = self._filetype_to_prepared_triggers[ filetype ]
     except KeyError:
       return False
-    return _MatchesSemanticTrigger( current_line, start_column, triggers )
+    return _MatchesSemanticTrigger( current_line, start_column, query, triggers )
 
 
 def _FiletypeTriggerDictFromSpec( trigger_dict_spec ):
@@ -84,15 +84,15 @@ def _StringTriggerMatches( trigger, line_value, start_column ):
   return False
 
 
-def _RegexTriggerMatches( trigger, line_value, start_column ):
+def _RegexTriggerMatches( trigger, line_value, start_column, query ):
   for match in trigger.finditer( line_value ):
-    if match.end() == start_column:
+    if match.end() > start_column and match.end() <= len(query) + start_column:
       return True
   return False
 
 
 # start_column is 0-based
-def _MatchesSemanticTrigger( line_value, start_column, trigger_list ):
+def _MatchesSemanticTrigger( line_value, start_column, query, trigger_list ):
   line_length = len( line_value )
   if not line_length or start_column > line_length:
     return False
@@ -101,7 +101,7 @@ def _MatchesSemanticTrigger( line_value, start_column, trigger_list ):
   for trigger in trigger_list:
     match = ( _StringTriggerMatches( trigger, line_value, start_column )
         if isinstance( trigger, basestring ) else
-        _RegexTriggerMatches( trigger, line_value, start_column ) )
+        _RegexTriggerMatches( trigger, line_value, start_column, query ) )
     if match:
       return True
   return False
